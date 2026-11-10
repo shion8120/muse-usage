@@ -1,7 +1,7 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
 // icon-color: purple; icon-glyph: chart-pie;
-// AI Limits Widget (Scriptable) v7
+// AI Limits Widget (Scriptable) v8
 // 中サイズ(横長): 3つの二重リング円グラフ
 //   メイン(外リング+中央の数字): Muse=週間 / Codex・Claude=5時間
 //   内リング: Muse=追加トークン / Codex・Claude=週間
@@ -115,13 +115,13 @@ function makeRingImage(size, outerPct, innerPct, colorOuter, colorInner, centerT
     if (pct <= 0) return;
     // グロー (少し太く・薄く)
     dc.addPath(pathFrom(arcPoints(r, 0, pct)));
-    dc.setStrokeColor(new Color(colorBase, 0.16));
-    dc.setLineWidth(lw + 6);
+    dc.setStrokeColor(new Color(colorBase, 0.13));
+    dc.setLineWidth(lw + 4);
     dc.strokePath();
-    // グラデーション本体 (区間ごとに色を補間)
-    const segs = 36;
+    // グラデーション本体 (区間ごとに色を補間し、継ぎ目が出ないよう少し重ねて描く)
+    const segs = 48;
     for (let i = 0; i < segs; i++) {
-      const a = pct * i / segs, b = pct * (i + 1) / segs;
+      const a = pct * i / segs, b = Math.min(pct, pct * (i + 1) / segs + pct * 0.03);
       dc.addPath(pathFrom(arcPoints(r, a, b)));
       dc.setStrokeColor(new Color(mixColor(colorLight, colorBase, (i + 0.5) / segs)));
       dc.setLineWidth(lw);
@@ -133,17 +133,18 @@ function makeRingImage(size, outerPct, innerPct, colorOuter, colorInner, centerT
     cap(startPt, lw, colorLight);
     cap(endPt, lw, colorBase);
   }
-  drawRing(size / 2 - 6, 9, outerPct, colorInner, colorOuter);
-  drawRing(size / 2 - 20, 7, innerPct, mixColor(colorInner, "#ffffff", 0.45), colorInner);
+  // リングは細めにして中央の開口を広く取る (size=80: 外r35/lw8, 内r24/lw6, 開口は直径42)
+  drawRing(size / 2 - 5, 8, outerPct, colorInner, colorOuter);
+  drawRing(size / 2 - 16, 6, innerPct, mixColor(colorInner, "#ffffff", 0.45), colorInner);
 
   dc.setTextAlignedCenter();
   dc.setTextColor(C.text);
-  dc.setFont(Font.boldSystemFont(16));
-  dc.drawTextInRect(centerText, new Rect(cx - 30, cy - 15, 60, 21));
+  dc.setFont(Font.boldSystemFont(centerText.length >= 4 ? 13 : 15));
+  dc.drawTextInRect(centerText, new Rect(cx - 21, cy - 12, 42, 18));
   if (centerSub) {
     dc.setTextColor(C.dim);
-    dc.setFont(Font.semiboldSystemFont(7));
-    dc.drawTextInRect(centerSub, new Rect(cx - 30, cy + 6, 60, 10));
+    dc.setFont(Font.semiboldSystemFont(6));
+    dc.drawTextInRect(centerSub, new Rect(cx - 21, cy + 5, 42, 9));
   }
   return dc.getImage();
 }
