@@ -1,9 +1,11 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
 // icon-color: purple; icon-glyph: chart-pie;
-// AI Limits Widget (Scriptable) v5
-// 中サイズ(横長): 3つの二重リング円グラフ (外=週間 / 内=5時間、Museは内=追加トークン)
-// 小サイズ(正方形): 従来のバー表示
+// AI Limits Widget (Scriptable) v6
+// 中サイズ(横長): 3つの二重リング円グラフ
+//   メイン(外リング+中央の数字): Muse=週間 / Codex・Claude=5時間
+//   内リング: Muse=追加トークン / Codex・Claude=週間
+// 小サイズ(正方形): バー表示
 // データ: GitHub shion8120/muse-usage の usage.json (1時間ごとに自動更新)
 
 const JSON_URL = "https://raw.githubusercontent.com/shion8120/muse-usage/main/usage.json";
@@ -39,7 +41,6 @@ const FALLBACK = {
 };
 
 const C = {
-  bg: new Color("#1c1c1e"),
   text: new Color("#ffffff"),
   sub: new Color("#aeaeb2"),
   dim: new Color("#8e8e93"),
@@ -60,14 +61,14 @@ function clampPct(x) {
   return Math.max(0, Math.min(100, n));
 }
 
-// 二重リングを描く (外リング/内リングとも「残り%」)
+// 二重リング (どちらも「残り%」)。中央にメイン指標の数字を描く
 function makeRingImage(size, outerPct, innerPct, colorOuter, colorInner, centerText, centerSub) {
   const dc = new DrawContext();
   dc.size = new Size(size, size);
   dc.opaque = false;
   dc.respectScreenScale = true;
   const cx = size / 2, cy = size / 2;
-  const track = new Color("#ffffff", 0.13);
+  const track = new Color("#ffffff", 0.10);
 
   function ringPath(r, pct) {
     const p = new Path();
@@ -92,37 +93,40 @@ function makeRingImage(size, outerPct, innerPct, colorOuter, colorInner, centerT
     }
   }
   drawRing(size / 2 - 6, 9, clampPct(outerPct), colorOuter);
-  drawRing(size / 2 - 21, 7, clampPct(innerPct), colorInner);
+  drawRing(size / 2 - 20, 7, clampPct(innerPct), colorInner);
 
-  // 中央テキスト
   dc.setTextAlignedCenter();
   dc.setTextColor(C.text);
-  dc.setFont(Font.boldSystemFont(19));
-  dc.drawTextInRect(centerText, new Rect(cx - 40, cy - 17, 80, 24));
-  dc.setTextColor(C.dim);
-  dc.setFont(Font.systemFont(8));
-  dc.drawTextInRect(centerSub, new Rect(cx - 40, cy + 7, 80, 12));
+  dc.setFont(Font.boldSystemFont(16));
+  dc.drawTextInRect(centerText, new Rect(cx - 30, cy - 15, 60, 21));
+  if (centerSub) {
+    dc.setTextColor(C.dim);
+    dc.setFont(Font.semiboldSystemFont(7));
+    dc.drawTextInRect(centerSub, new Rect(cx - 30, cy + 6, 60, 10));
+  }
   return dc.getImage();
 }
 
 function servicesFrom(d) {
   const muse = {
-    key: "muse", name: "Muse",
-    plan: planLabel(d.plan),
+    key: "muse", name: "Muse", plan: planLabel(d.plan),
     outer: clampPct(d.weeklyRemainingPercent),
     inner: clampPct(100 - (d.additionalUsedPercent || 0)),
+    main: clampPct(d.weeklyRemainingPercent), mainLabel: "WEEKLY",
     innerDesc: "追加 " + clampPct(100 - (d.additionalUsedPercent || 0)) + "% (" + (d.additionalTokensLeft || "-") + ")",
-    reset: "リセット " + (d.resetText || "")
+    reset: "週リセット " + (d.resetText || "")
   };
   function sub(s, key) {
-    if (!s) return { key: key, name: key === "codex" ? "Codex" : "Claude", plan: "", outer: 0, inner: 0, innerDesc: "未設定", reset: "", empty: true };
+    const nm = key === "codex" ? "Codex" : "Claude";
+    if (!s) return { key: key, name: nm, plan: "", outer: 0, inner: 0, main: null, mainLabel: "", innerDesc: "未設定", reset: "" };
+    const fiveLeft = clampPct(100 - (s.fiveHourUsedPercent || 0));
+    const weekLeft = clampPct(100 - (s.weeklyUsedPercent || 0));
     return {
-      key: key, name: key === "codex" ? "Codex" : "Claude",
-      plan: planLabel(s.plan),
-      outer: clampPct(100 - (s.weeklyUsedPercent || 0)),
-      inner: clampPct(100 - (s.fiveHourUsedPercent || 0)),
-      innerDesc: "5h " + clampPct(100 - (s.fiveHourUsedPercent || 0)) + "% left",
-      reset: "リセット " + (s.weeklyResetText || "")
+      key: key, name: nm, plan: planLabel(s.plan),
+      outer: fiveLeft, inner: weekLeft,
+      main: fiveLeft, mainLabel: "5H LEFT",
+      innerDesc: "週 " + weekLeft + "% left",
+      reset: "5hリセット " + (s.fiveHourResetText || "")
     };
   }
   return [muse, sub(d.codex, "codex"), sub(d.claude, "claude")];
@@ -131,8 +135,11 @@ function servicesFrom(d) {
 // ===== 横長 (中サイズ): リング×3 =====
 function buildWide(d) {
   const w = new ListWidget();
-  w.backgroundColor = C.bg;
-  w.setPadding(10, 14, 10, 14);
+  const grad = new LinearGradient();
+  grad.colors = [new Color("#26262b"), new Color("#17171a")];
+  grad.locations = [0, 1];
+  w.backgroundGradient = grad;
+  w.setPadding(9, 14, 9, 14);
 
   const head = w.addStack();
   head.centerAlignContent();
@@ -143,46 +150,58 @@ function buildWide(d) {
   const up = head.addText("Updated " + (d.updatedText || ""));
   up.font = Font.systemFont(9);
   up.textColor = C.dim;
-  w.addSpacer(4);
+  w.addSpacer(5);
 
   const row = w.addStack();
   row.layoutHorizontally();
   const services = servicesFrom(d);
   services.forEach((s, i) => {
-    if (i > 0) row.addSpacer();
+    if (i > 0) row.addSpacer(6);
     const col = row.addStack();
     col.layoutVertically();
-    col.centerAlignContent();
+    col.size = new Size(98, 0);
 
     const imgHolder = col.addStack();
     imgHolder.addSpacer();
-    const center = s.empty ? "—" : String(Math.round(s.outer)) + "%";
-    const img = makeRingImage(84, s.outer, s.inner, SERVICE_COLORS[s.key], SERVICE_LIGHT[s.key], center, "WEEKLY");
+    const center = s.main == null ? "—" : String(Math.round(s.main)) + "%";
+    const img = makeRingImage(80, s.outer, s.inner, SERVICE_COLORS[s.key], SERVICE_LIGHT[s.key], center, s.mainLabel);
     const im = imgHolder.addImage(img);
-    im.imageSize = new Size(84, 84);
+    im.imageSize = new Size(80, 80);
     imgHolder.addSpacer();
-    col.addSpacer(3);
+    col.addSpacer(4);
 
     const nm = col.addStack();
     nm.centerAlignContent();
     nm.addSpacer();
     const dot = nm.addText("● ");
-    dot.font = Font.systemFont(9);
+    dot.font = Font.systemFont(8);
     dot.textColor = new Color(SERVICE_COLORS[s.key]);
-    const nameT = nm.addText(s.name + (s.plan ? " " + s.plan : ""));
+    const nameT = nm.addText(s.name);
     nameT.font = Font.boldSystemFont(11);
     nameT.textColor = C.text;
+    if (s.plan) {
+      nm.addSpacer(4);
+      const chip = nm.addStack();
+      chip.backgroundColor = new Color(SERVICE_COLORS[s.key], 0.30);
+      chip.cornerRadius = 5;
+      chip.setPadding(1, 5, 1, 5);
+      const pt = chip.addText(s.plan);
+      pt.font = Font.semiboldSystemFont(8);
+      pt.textColor = C.text;
+    }
     nm.addSpacer();
-    col.addSpacer(1);
+    col.addSpacer(2);
 
     const inner = col.addText(s.innerDesc);
-    inner.font = Font.systemFont(9);
+    inner.font = Font.semiboldSystemFont(9);
     inner.textColor = new Color(SERVICE_LIGHT[s.key]);
     inner.centerAlignText();
+    inner.minimumScaleFactor = 0.8;
     const rs = col.addText(s.reset);
     rs.font = Font.systemFont(8);
     rs.textColor = C.dim;
     rs.centerAlignText();
+    rs.minimumScaleFactor = 0.8;
   });
   return w;
 }
@@ -234,7 +253,7 @@ function section(parent, name, plan, leftPct, colorHex, subText) {
 
 function buildSquare(d) {
   const w = new ListWidget();
-  w.backgroundColor = C.bg;
+  w.backgroundColor = new Color("#1c1c1e");
   w.setPadding(12, 12, 10, 12);
   const head = w.addStack();
   head.centerAlignContent();
