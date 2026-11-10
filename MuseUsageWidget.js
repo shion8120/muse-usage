@@ -1,19 +1,13 @@
-// AI制限ウィジェット for Scriptable (iPhone ホーム画面用) v4
-// Muse / Codex / Claude の残り制限をまとめて表示する。
-// データは GitHub (shion8120/muse-usage の usage.json) から自動取得。
-// Muse分は りんは が1時間ごとに更新、Codex/Claude分は PC「kz」の
-// fetch-limits.ps1 が取得して同じJSONにマージされる。
-//
-// 使い方:
-// 1. App Storeで「Scriptable」を入れる
-// 2. このファイルを「ファイル」アプリで iCloud Drive > Scriptable へ移動
-//    （または Scriptable で新規作成して中身を貼り付け、名前を MuseUsageWidget にする）
-// 3. ホーム画面に Scriptable ウィジェット（正方形）を追加し、
-//    ウィジェット編集で Script = MuseUsageWidget を選ぶ
+// Variables used by Scriptable.
+// These must be at the very top of the file. Do not edit.
+// icon-color: purple; icon-glyph: chart-pie;
+// AI Limits Widget (Scriptable) v5
+// 中サイズ(横長): 3つの二重リング円グラフ (外=週間 / 内=5時間、Museは内=追加トークン)
+// 小サイズ(正方形): 従来のバー表示
+// データ: GitHub shion8120/muse-usage の usage.json (1時間ごとに自動更新)
 
 const JSON_URL = "https://raw.githubusercontent.com/shion8120/muse-usage/main/usage.json";
 
-// 取得失敗時のフォールバック（2026-11-10 11:39 時点の実測値）
 const FALLBACK = {
   plan: "Free",
   weeklyUsedPercent: 5,
@@ -25,8 +19,8 @@ const FALLBACK = {
   codex: {
     plan: "plus",
     fiveHourUsedPercent: 0,
-    fiveHourResetAt: "2026-11-10T16:38:53+09:00",
-    fiveHourResetText: "11/10 16:38",
+    fiveHourResetAt: "2026-11-10T17:12:17+09:00",
+    fiveHourResetText: "11/10 17:12",
     weeklyUsedPercent: 7,
     weeklyResetAt: "2026-11-11T19:03:56+09:00",
     weeklyResetText: "11/11 19:03"
@@ -40,187 +34,250 @@ const FALLBACK = {
     weeklyResetAt: "2026-11-12T20:00:00+09:00",
     weeklyResetText: "11/12 20:00"
   },
-  updatedText: "11/10 11:56"
+  updatedAt: "2026-11-10 12:12",
+  updatedText: "11/10 12:12"
 };
 
-const COLORS = {
-  muse: new Color("#8b5cf6"),
-  codex: new Color("#10a37f"),
-  claude: new Color("#d97757"),
-  sub: new Color("#9a9aa3"),
-  faint: new Color("#6e6e76"),
-  track: new Color("#3f3f46")
+const C = {
+  bg: new Color("#1c1c1e"),
+  text: new Color("#ffffff"),
+  sub: new Color("#aeaeb2"),
+  dim: new Color("#8e8e93"),
+  barBg: new Color("#3a3a3c")
 };
+const SERVICE_COLORS = { muse: "#8b5cf6", codex: "#10a37f", claude: "#d97757" };
+const SERVICE_LIGHT = { muse: "#c4b5fd", codex: "#6ee7b7", claude: "#fdba74" };
+
+function planLabel(p) {
+  if (!p) return "";
+  const s = String(p);
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function clampPct(x) {
+  const n = Number(x);
+  if (isNaN(n)) return 0;
+  return Math.max(0, Math.min(100, n));
+}
+
+// 二重リングを描く (外リング/内リングとも「残り%」)
+function makeRingImage(size, outerPct, innerPct, colorOuter, colorInner, centerText, centerSub) {
+  const dc = new DrawContext();
+  dc.size = new Size(size, size);
+  dc.opaque = false;
+  dc.respectScreenScale = true;
+  const cx = size / 2, cy = size / 2;
+  const track = new Color("#ffffff", 0.13);
+
+  function ringPath(r, pct) {
+    const p = new Path();
+    const steps = Math.max(2, Math.round(90 * pct / 100));
+    for (let i = 0; i <= steps; i++) {
+      const a = -Math.PI / 2 + (i / steps) * (Math.PI * 2 * pct / 100);
+      const pt = new Point(cx + r * Math.cos(a), cy + r * Math.sin(a));
+      if (i === 0) p.move(pt); else p.addLine(pt);
+    }
+    return p;
+  }
+  function drawRing(r, lw, pct, colorHex) {
+    dc.addPath(ringPath(r, 100));
+    dc.setStrokeColor(track);
+    dc.setLineWidth(lw);
+    dc.strokePath();
+    if (pct > 0) {
+      dc.addPath(ringPath(r, pct));
+      dc.setStrokeColor(new Color(colorHex));
+      dc.setLineWidth(lw);
+      dc.strokePath();
+    }
+  }
+  drawRing(size / 2 - 6, 9, clampPct(outerPct), colorOuter);
+  drawRing(size / 2 - 21, 7, clampPct(innerPct), colorInner);
+
+  // 中央テキスト
+  dc.setTextAlignedCenter();
+  dc.setTextColor(C.text);
+  dc.setFont(Font.boldSystemFont(19));
+  dc.drawTextInRect(centerText, new Rect(cx - 40, cy - 17, 80, 24));
+  dc.setTextColor(C.dim);
+  dc.setFont(Font.systemFont(8));
+  dc.drawTextInRect(centerSub, new Rect(cx - 40, cy + 7, 80, 12));
+  return dc.getImage();
+}
+
+function servicesFrom(d) {
+  const muse = {
+    key: "muse", name: "Muse",
+    plan: planLabel(d.plan),
+    outer: clampPct(d.weeklyRemainingPercent),
+    inner: clampPct(100 - (d.additionalUsedPercent || 0)),
+    innerDesc: "追加 " + clampPct(100 - (d.additionalUsedPercent || 0)) + "% (" + (d.additionalTokensLeft || "-") + ")",
+    reset: "リセット " + (d.resetText || "")
+  };
+  function sub(s, key) {
+    if (!s) return { key: key, name: key === "codex" ? "Codex" : "Claude", plan: "", outer: 0, inner: 0, innerDesc: "未設定", reset: "", empty: true };
+    return {
+      key: key, name: key === "codex" ? "Codex" : "Claude",
+      plan: planLabel(s.plan),
+      outer: clampPct(100 - (s.weeklyUsedPercent || 0)),
+      inner: clampPct(100 - (s.fiveHourUsedPercent || 0)),
+      innerDesc: "5h " + clampPct(100 - (s.fiveHourUsedPercent || 0)) + "% left",
+      reset: "リセット " + (s.weeklyResetText || "")
+    };
+  }
+  return [muse, sub(d.codex, "codex"), sub(d.claude, "claude")];
+}
+
+// ===== 横長 (中サイズ): リング×3 =====
+function buildWide(d) {
+  const w = new ListWidget();
+  w.backgroundColor = C.bg;
+  w.setPadding(10, 14, 10, 14);
+
+  const head = w.addStack();
+  head.centerAlignContent();
+  const t = head.addText("✦ AI Limits");
+  t.font = Font.boldSystemFont(12);
+  t.textColor = C.text;
+  head.addSpacer();
+  const up = head.addText("Updated " + (d.updatedText || ""));
+  up.font = Font.systemFont(9);
+  up.textColor = C.dim;
+  w.addSpacer(4);
+
+  const row = w.addStack();
+  row.layoutHorizontally();
+  const services = servicesFrom(d);
+  services.forEach((s, i) => {
+    if (i > 0) row.addSpacer();
+    const col = row.addStack();
+    col.layoutVertically();
+    col.centerAlignContent();
+
+    const imgHolder = col.addStack();
+    imgHolder.addSpacer();
+    const center = s.empty ? "—" : String(Math.round(s.outer)) + "%";
+    const img = makeRingImage(84, s.outer, s.inner, SERVICE_COLORS[s.key], SERVICE_LIGHT[s.key], center, "WEEKLY");
+    const im = imgHolder.addImage(img);
+    im.imageSize = new Size(84, 84);
+    imgHolder.addSpacer();
+    col.addSpacer(3);
+
+    const nm = col.addStack();
+    nm.centerAlignContent();
+    nm.addSpacer();
+    const dot = nm.addText("● ");
+    dot.font = Font.systemFont(9);
+    dot.textColor = new Color(SERVICE_COLORS[s.key]);
+    const nameT = nm.addText(s.name + (s.plan ? " " + s.plan : ""));
+    nameT.font = Font.boldSystemFont(11);
+    nameT.textColor = C.text;
+    nm.addSpacer();
+    col.addSpacer(1);
+
+    const inner = col.addText(s.innerDesc);
+    inner.font = Font.systemFont(9);
+    inner.textColor = new Color(SERVICE_LIGHT[s.key]);
+    inner.centerAlignText();
+    const rs = col.addText(s.reset);
+    rs.font = Font.systemFont(8);
+    rs.textColor = C.dim;
+    rs.centerAlignText();
+  });
+  return w;
+}
+
+// ===== 正方形 (小サイズ): バー×3 =====
+function bar(parent, leftPct, colorHex) {
+  const track = parent.addStack();
+  track.backgroundColor = C.barBg;
+  track.cornerRadius = 3;
+  track.size = new Size(0, 6);
+  const wdt = Math.max(0, Math.min(128, Math.round(128 * clampPct(leftPct) / 100)));
+  if (wdt > 0) {
+    const fill = track.addStack();
+    fill.backgroundColor = new Color(colorHex);
+    fill.cornerRadius = 3;
+    fill.size = new Size(wdt, 6);
+  }
+  track.addSpacer();
+}
+
+function section(parent, name, plan, leftPct, colorHex, subText) {
+  const row = parent.addStack();
+  row.centerAlignContent();
+  const n = row.addText(name);
+  n.font = Font.boldSystemFont(11);
+  n.textColor = C.text;
+  if (plan) {
+    const p = row.addText(" " + plan);
+    p.font = Font.systemFont(9);
+    p.textColor = C.sub;
+  }
+  row.addSpacer();
+  const v = row.addText(leftPct == null ? "未設定" : Math.round(leftPct) + "% left");
+  v.font = Font.boldMonospacedSystemFont(13);
+  v.textColor = new Color(colorHex);
+  parent.addSpacer(2);
+  if (leftPct == null) {
+    const s = parent.addText(subText);
+    s.font = Font.systemFont(8);
+    s.textColor = C.dim;
+  } else {
+    bar(parent, leftPct, colorHex);
+    parent.addSpacer(2);
+    const s = parent.addText(subText);
+    s.font = Font.systemFont(8);
+    s.textColor = C.dim;
+  }
+}
+
+function buildSquare(d) {
+  const w = new ListWidget();
+  w.backgroundColor = C.bg;
+  w.setPadding(12, 12, 10, 12);
+  const head = w.addStack();
+  head.centerAlignContent();
+  const t = head.addText("✦ AI Limits");
+  t.font = Font.boldSystemFont(12);
+  t.textColor = C.text;
+  head.addSpacer();
+  const up = head.addText(d.updatedText || "");
+  up.font = Font.systemFont(8);
+  up.textColor = C.dim;
+  w.addSpacer(7);
+  section(w, "Muse", planLabel(d.plan), d.weeklyRemainingPercent, SERVICE_COLORS.muse,
+    "週 Resets " + (d.resetText || "") + " · 追加 " + (d.additionalTokensLeft || "-"));
+  w.addSpacer(8);
+  section(w, "Codex", d.codex ? planLabel(d.codex.plan) : "", d.codex ? 100 - d.codex.weeklyUsedPercent : null, SERVICE_COLORS.codex,
+    d.codex ? "週 Resets " + d.codex.weeklyResetText + " · 5h " + (100 - d.codex.fiveHourUsedPercent) + "%" : "取得できませんでした");
+  w.addSpacer(8);
+  section(w, "Claude", d.claude ? planLabel(d.claude.plan) : "", d.claude ? 100 - d.claude.weeklyUsedPercent : null, SERVICE_COLORS.claude,
+    d.claude ? "週 Resets " + d.claude.weeklyResetText + " · 5h " + (100 - d.claude.fiveHourUsedPercent) + "%" : "PCでClaude Codeにログインすると表示されます");
+  return w;
+}
 
 async function loadData() {
   try {
     const req = new Request(JSON_URL);
-    req.timeoutInterval = 10;
-    const json = await req.loadJSON();
-    return { ...FALLBACK, ...json };
+    req.timeoutInterval = 15;
+    return await req.loadJSON();
   } catch (e) {
     return FALLBACK;
   }
 }
 
-function makeBar(percent, width, height, color) {
-  const ctx = new DrawContext();
-  ctx.size = new Size(width, height);
-  ctx.opaque = false;
-  ctx.setFillColor(COLORS.track);
-  const bg = new Path();
-  bg.addRoundedRect(new Rect(0, 0, width, height), height / 2, height / 2);
-  ctx.addPath(bg);
-  ctx.fillPath();
-  const p = Math.min(100, Math.max(0, percent));
-  if (p > 0) {
-    const w = Math.max(height, width * p / 100);
-    ctx.setFillColor(color);
-    const fg = new Path();
-    fg.addRoundedRect(new Rect(0, 0, w, height), height / 2, height / 2);
-    ctx.addPath(fg);
-    ctx.fillPath();
-  }
-  return ctx.getImage();
-}
-
-function addText(parent, text, font, color) {
-  const t = parent.addText(text);
-  t.font = font;
-  t.textColor = color;
-  return t;
-}
-
-function capPlan(p) {
-  if (!p) return "";
-  return p.charAt(0).toUpperCase() + p.slice(1);
-}
-
-// 正方形（小）用：1サービス = 名前行 + バー + 補足行
-function smallBlock(w, W, name, plan, leftPct, color, subText) {
-  const row = w.addStack();
-  row.layoutHorizontally();
-  row.bottomAlignContent();
-  addText(row, name, Font.boldSystemFont(12.5), Color.white());
-  if (plan) {
-    row.addSpacer(4);
-    addText(row, plan, Font.systemFont(9), COLORS.sub);
-  }
-  row.addSpacer();
-  if (leftPct !== null && leftPct !== undefined) {
-    addText(row, `${leftPct}% left`, Font.boldSystemFont(13), Color.white());
-  } else {
-    addText(row, "未設定", Font.systemFont(11), COLORS.sub);
-  }
-  w.addSpacer(2.5);
-  const bar = w.addImage(makeBar(leftPct || 0, W, 5.5, color));
-  bar.imageSize = new Size(W, 5.5);
-  w.addSpacer(2);
-  addText(w, subText, Font.systemFont(9), COLORS.sub);
-}
-
-// 中サイズ用：1サービス = 名前行 + 2本バー（ラベル付き）
-function mediumBlock(w, W, name, plan, color, lines) {
-  const row = w.addStack();
-  row.layoutHorizontally();
-  addText(row, name, Font.boldSystemFont(13), Color.white());
-  if (plan) {
-    row.addSpacer(4);
-    addText(row, plan, Font.systemFont(9.5), COLORS.sub);
-  }
-  row.addSpacer();
-  w.addSpacer(3);
-  for (const ln of lines) {
-    const lr = w.addStack();
-    lr.layoutHorizontally();
-    addText(lr, ln.label, Font.systemFont(9.5), COLORS.sub);
-    lr.addSpacer();
-    addText(lr, `${ln.left}% left`, Font.boldSystemFont(10.5), Color.white());
-    w.addSpacer(1.5);
-    const bar = w.addImage(makeBar(ln.left, W, 5, color));
-    bar.imageSize = new Size(W, 5);
-    w.addSpacer(2.5);
-  }
-}
-
-async function buildWidget(data) {
-  const family = config.widgetFamily || "medium";
-  const isSmall = family === "small";
-  const W = isSmall ? 132 : 300;
-
-  const w = new ListWidget();
-  const grad = new LinearGradient();
-  grad.colors = [new Color("#232329"), new Color("#17171c")];
-  grad.locations = [0, 1];
-  w.backgroundGradient = grad;
-  w.setPadding(11, 13, 9, 13);
-
-  const head = w.addStack();
-  head.layoutHorizontally();
-  addText(head, "✦ ", Font.boldSystemFont(12), COLORS.muse);
-  addText(head, "AI Limits", Font.boldSystemFont(13), Color.white());
-  head.addSpacer();
-  addText(head, data.updatedText || "", Font.systemFont(9), COLORS.faint);
-  w.addSpacer(isSmall ? 6 : 7);
-
-  const museLeft = data.weeklyRemainingPercent;
-  const codex = data.codex;
-  const claude = data.claude;
-  const claudeReady = claude && !claude.status && !claude.error &&
-    typeof claude.weeklyUsedPercent === "number";
-
-  if (isSmall) {
-    smallBlock(w, W, "Muse", capPlan(data.plan), museLeft, COLORS.muse,
-      `週間 · リセット ${data.resetText} · 追加 ${data.additionalTokensLeft}`);
-    w.addSpacer(7);
-    if (codex && !codex.error) {
-      smallBlock(w, W, "Codex", capPlan(codex.plan), 100 - codex.weeklyUsedPercent, COLORS.codex,
-        `5h 使用${codex.fiveHourUsedPercent}% · 週間リセット ${codex.weeklyResetText}`);
-    } else {
-      smallBlock(w, W, "Codex", "", null, COLORS.codex, "取得できませんでした");
-    }
-    w.addSpacer(7);
-    if (claudeReady) {
-      smallBlock(w, W, "Claude", capPlan(claude.plan), 100 - claude.weeklyUsedPercent, COLORS.claude,
-        `5h 使用${claude.fiveHourUsedPercent}% · 週間リセット ${claude.weeklyResetText}`);
-    } else {
-      smallBlock(w, W, "Claude", "", null, COLORS.claude,
-        "PCでClaude Codeにログインすると表示されます");
-    }
-  } else {
-    mediumBlock(w, W, "Muse", capPlan(data.plan), COLORS.muse, [
-      { label: `週間 · リセット ${data.resetText}`, left: museLeft },
-      { label: `追加トークン ${data.additionalTokensLeft}`, left: 100 - data.additionalUsedPercent }
-    ]);
-    w.addSpacer(4);
-    if (codex && !codex.error) {
-      mediumBlock(w, W, "Codex", capPlan(codex.plan), COLORS.codex, [
-        { label: `5時間 · リセット ${codex.fiveHourResetText}`, left: 100 - codex.fiveHourUsedPercent },
-        { label: `週間 · リセット ${codex.weeklyResetText}`, left: 100 - codex.weeklyUsedPercent }
-      ]);
-    } else {
-      addText(w, "Codex · 取得できませんでした", Font.systemFont(11), COLORS.sub);
-    }
-    w.addSpacer(4);
-    if (claudeReady) {
-      mediumBlock(w, W, "Claude", capPlan(claude.plan), COLORS.claude, [
-        { label: `5時間 · リセット ${claude.fiveHourResetText}`, left: 100 - claude.fiveHourUsedPercent },
-        { label: `週間 · リセット ${claude.weeklyResetText}`, left: 100 - claude.weeklyUsedPercent }
-      ]);
-    } else {
-      addText(w, "Claude · PCでClaude Codeにログインすると表示されます", Font.systemFont(11), COLORS.sub);
-    }
-  }
-
-  w.refreshAfterDate = new Date(Date.now() + 1000 * 60 * 30);
-  return w;
-}
-
 const data = await loadData();
-const widget = await buildWidget(data);
+let widget;
+if (config.widgetFamily === "small") {
+  widget = buildSquare(data);
+} else {
+  widget = buildWide(data);
+}
+widget.refreshAfterDate = new Date(Date.now() + 30 * 60 * 1000);
 if (config.runsInWidget) {
   Script.setWidget(widget);
 } else {
-  widget.presentSmall();
+  widget.presentMedium();
 }
 Script.complete();
