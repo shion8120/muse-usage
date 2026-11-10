@@ -1,7 +1,7 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
 // icon-color: purple; icon-glyph: chart-pie;
-// AI Limits Widget (Scriptable) v6
+// AI Limits Widget (Scriptable) v7
 // 中サイズ(横長): 3つの二重リング円グラフ
 //   メイン(外リング+中央の数字): Muse=週間 / Codex・Claude=5時間
 //   内リング: Muse=追加トークン / Codex・Claude=週間
@@ -61,7 +61,21 @@ function clampPct(x) {
   return Math.max(0, Math.min(100, n));
 }
 
+// 色の補間 (グラデーション用)
+function hexRgb(hex) {
+  return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
+}
+function mixColor(hexA, hexB, t) {
+  const a = hexRgb(hexA), b = hexRgb(hexB);
+  const r = Math.round(a[0] + (b[0] - a[0]) * t);
+  const g = Math.round(a[1] + (b[1] - a[1]) * t);
+  const bl = Math.round(a[2] + (b[2] - a[2]) * t);
+  const s = (1 << 24) + (r << 16) + (g << 8) + bl;
+  return "#" + s.toString(16).slice(1);
+}
+
 // 二重リング (どちらも「残り%」)。中央にメイン指標の数字を描く
+// 描画: 明→濃のグラデーション + ほのかなグロー + 両端の丸キャップ
 function makeRingImage(size, outerPct, innerPct, colorOuter, colorInner, centerText, centerSub) {
   const dc = new DrawContext();
   dc.size = new Size(size, size);
@@ -70,30 +84,57 @@ function makeRingImage(size, outerPct, innerPct, colorOuter, colorInner, centerT
   const cx = size / 2, cy = size / 2;
   const track = new Color("#ffffff", 0.10);
 
-  function ringPath(r, pct) {
-    const p = new Path();
-    const steps = Math.max(2, Math.round(90 * pct / 100));
+  function arcPoints(r, fromPct, toPct) {
+    const pts = [];
+    const steps = Math.max(2, Math.round(60 * (toPct - fromPct) / 100));
     for (let i = 0; i <= steps; i++) {
-      const a = -Math.PI / 2 + (i / steps) * (Math.PI * 2 * pct / 100);
-      const pt = new Point(cx + r * Math.cos(a), cy + r * Math.sin(a));
-      if (i === 0) p.move(pt); else p.addLine(pt);
+      const p = fromPct + (toPct - fromPct) * (i / steps);
+      const a = -Math.PI / 2 + (p / 100) * Math.PI * 2;
+      pts.push(new Point(cx + r * Math.cos(a), cy + r * Math.sin(a)));
     }
+    return pts;
+  }
+  function pathFrom(pts) {
+    const p = new Path();
+    pts.forEach((pt, i) => { if (i === 0) p.move(pt); else p.addLine(pt); });
     return p;
   }
-  function drawRing(r, lw, pct, colorHex) {
-    dc.addPath(ringPath(r, 100));
+  function cap(pt, d, colorHex) {
+    const p = new Path();
+    p.addEllipse(new Rect(pt.x - d / 2, pt.y - d / 2, d, d));
+    dc.addPath(p);
+    dc.setFillColor(new Color(colorHex));
+    dc.fillPath();
+  }
+  function drawRing(r, lw, pctRaw, colorLight, colorBase) {
+    const pct = clampPct(pctRaw);
+    dc.addPath(pathFrom(arcPoints(r, 0, 100)));
     dc.setStrokeColor(track);
     dc.setLineWidth(lw);
     dc.strokePath();
-    if (pct > 0) {
-      dc.addPath(ringPath(r, pct));
-      dc.setStrokeColor(new Color(colorHex));
+    if (pct <= 0) return;
+    // グロー (少し太く・薄く)
+    dc.addPath(pathFrom(arcPoints(r, 0, pct)));
+    dc.setStrokeColor(new Color(colorBase, 0.16));
+    dc.setLineWidth(lw + 6);
+    dc.strokePath();
+    // グラデーション本体 (区間ごとに色を補間)
+    const segs = 36;
+    for (let i = 0; i < segs; i++) {
+      const a = pct * i / segs, b = pct * (i + 1) / segs;
+      dc.addPath(pathFrom(arcPoints(r, a, b)));
+      dc.setStrokeColor(new Color(mixColor(colorLight, colorBase, (i + 0.5) / segs)));
       dc.setLineWidth(lw);
       dc.strokePath();
     }
+    // 丸キャップ (始点=明色 / 終点=濃色)
+    const startPt = arcPoints(r, 0, 0)[0];
+    const endPt = arcPoints(r, pct, pct)[0];
+    cap(startPt, lw, colorLight);
+    cap(endPt, lw, colorBase);
   }
-  drawRing(size / 2 - 6, 9, clampPct(outerPct), colorOuter);
-  drawRing(size / 2 - 20, 7, clampPct(innerPct), colorInner);
+  drawRing(size / 2 - 6, 9, outerPct, colorInner, colorOuter);
+  drawRing(size / 2 - 20, 7, innerPct, mixColor(colorInner, "#ffffff", 0.45), colorInner);
 
   dc.setTextAlignedCenter();
   dc.setTextColor(C.text);
