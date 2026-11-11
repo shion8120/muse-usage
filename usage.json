@@ -1,29 +1,29 @@
 {
-  "plan": "Free",
-  "weeklyUsedPercent": 19,
-  "weeklyRemainingPercent": 81,
-  "resetAt": "2026-11-17T04:18:00+09:00",
-  "resetText": "11/17 4:18",
   "additionalTokensLeft": "3B",
   "additionalUsedPercent": 0,
-  "codex": {
-    "plan": "plus",
-    "fiveHourUsedPercent": 28,
-    "fiveHourResetAt": "2026-11-11T16:06:14+09:00",
-    "fiveHourResetText": "11/11 16:06",
-    "weeklyUsedPercent": 12,
-    "weeklyResetAt": "2026-11-11T19:03:56+09:00",
-    "weeklyResetText": "11/11 19:03"
-  },
   "claude": {
+    "fiveHourResetAt": "2026-11-11T17:50:00+09:00",
+    "fiveHourResetText": "11/11 17:50",
+    "fiveHourUsedPercent": 1,
     "plan": "pro",
-    "fiveHourUsedPercent": 42,
-    "fiveHourResetAt": "2026-11-11T12:30:00+09:00",
-    "fiveHourResetText": "11/11 12:30",
-    "weeklyUsedPercent": 50,
     "weeklyResetAt": "2026-11-12T20:00:00+09:00",
-    "weeklyResetText": "11/12 20:00"
+    "weeklyResetText": "11/12 20:00",
+    "weeklyUsedPercent": 50
   },
-  "updatedAt": "2026-11-11 12:12",
-  "updatedText": "11/11 12:12"
+  "codex": {
+    "fiveHourResetAt": "2026-11-11T16:06:15+09:00",
+    "fiveHourResetText": "11/11 16:06",
+    "fiveHourUsedPercent": 28,
+    "plan": "plus",
+    "weeklyResetAt": "2026-11-11T19:03:57+09:00",
+    "weeklyResetText": "11/11 19:03",
+    "weeklyUsedPercent": 12
+  },
+  "plan": "Free",
+  "resetAt": "2026-11-17T04:18:00+09:00",
+  "resetText": "11/17 4:18",
+  "updatedAt": "2026-11-11 13:11",
+  "updatedText": "11/11 13:11",
+  "weeklyRemainingPercent": 81,
+  "weeklyUsedPercent": 19
 }
