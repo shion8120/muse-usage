@@ -1,7 +1,9 @@
 // Variables used by Scriptable.
 // These must be at the very top of the file. Do not edit.
 // icon-color: purple; icon-glyph: chart-pie;
-// AI Limits Widget (Scriptable) v8
+// AI Limits Widget (Scriptable) v9
+// v9: Claude取得が429等で止まったときは前回値を stale 付きで受ける。
+//     その間はリセット行の代わりに「旧 M/D H:mm の値」と表示する (配置は不変)
 // 中サイズ(横長): 3つの二重リング円グラフ
 //   メイン(外リング+中央の数字): Muse=週間 / Codex・Claude=5時間
 //   内リング: Muse=追加トークン / Codex・Claude=週間
@@ -168,7 +170,9 @@ function servicesFrom(d) {
       outer: fiveLeft, inner: weekLeft,
       main: fiveLeft, mainLabel: "5H LEFT",
       innerDesc: "週 " + weekLeft + "% left",
-      reset: "5hリセット " + (s.fiveHourResetText || "")
+      reset: "5hリセット " + (s.fiveHourResetText || ""),
+      stale: !!s.stale,
+      staleSinceText: s.staleSinceText || ""
     };
   }
   return [muse, sub(d.codex, "codex"), sub(d.claude, "claude")];
@@ -239,9 +243,10 @@ function buildWide(d) {
     inner.textColor = new Color(SERVICE_LIGHT[s.key]);
     inner.centerAlignText();
     inner.minimumScaleFactor = 0.8;
-    const rs = col.addText(s.reset);
+    const resetShown = s.stale ? ("旧 " + s.staleSinceText + " の値") : s.reset;
+    const rs = col.addText(resetShown);
     rs.font = Font.systemFont(8);
-    rs.textColor = C.dim;
+    rs.textColor = s.stale ? new Color(SERVICE_LIGHT[s.key]) : C.dim;
     rs.centerAlignText();
     rs.minimumScaleFactor = 0.8;
   });
@@ -314,7 +319,7 @@ function buildSquare(d) {
     d.codex ? "週 Resets " + d.codex.weeklyResetText + " · 5h " + (100 - d.codex.fiveHourUsedPercent) + "%" : "取得できませんでした");
   w.addSpacer(8);
   section(w, "Claude", d.claude ? planLabel(d.claude.plan) : "", d.claude ? 100 - d.claude.weeklyUsedPercent : null, SERVICE_COLORS.claude,
-    d.claude ? "週 Resets " + d.claude.weeklyResetText + " · 5h " + (100 - d.claude.fiveHourUsedPercent) + "%" : "PCでClaude Codeにログインすると表示されます");
+    d.claude ? "週 Resets " + d.claude.weeklyResetText + " · 5h " + (100 - d.claude.fiveHourUsedPercent) + "%" + (d.claude.stale ? " · 旧データ(" + (d.claude.staleSinceText || "") + ")" : "") : "PCでClaude Codeにログインすると表示されます");
   return w;
 }
 
