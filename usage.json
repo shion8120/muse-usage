@@ -14,18 +14,18 @@
   },
   "codex": {
     "plan": "plus",
-    "fiveHourUsedPercent": 0,
-    "fiveHourResetAt": "2026-11-12T04:11:58+09:00",
-    "fiveHourResetText": "11/12 4:11",
-    "weeklyUsedPercent": 0,
-    "weeklyResetAt": "2026-11-18T23:11:58+09:00",
-    "weeklyResetText": "11/18 23:11"
+    "fiveHourUsedPercent": 6,
+    "fiveHourResetAt": "2026-11-12T04:25:41+09:00",
+    "fiveHourResetText": "11/12 4:25",
+    "weeklyUsedPercent": 1,
+    "weeklyResetAt": "2026-11-18T23:25:41+09:00",
+    "weeklyResetText": "11/18 23:25"
   },
   "plan": "Free",
   "resetAt": "2026-11-17T04:18:00+09:00",
   "resetText": "11/17 4:18",
-  "updatedAt": "2026-11-11 23:11",
-  "updatedText": "11/11 23:11",
+  "updatedAt": "2026-11-12 00:12",
+  "updatedText": "11/12 00:12",
   "weeklyRemainingPercent": 70,
   "weeklyUsedPercent": 30
 }
