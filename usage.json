@@ -1,7 +1,7 @@
 {
   "plan": "Free",
-  "weeklyUsedPercent": 48,
-  "weeklyRemainingPercent": 52,
+  "weeklyUsedPercent": 52,
+  "weeklyRemainingPercent": 48,
   "resetAt": "2026-11-17T04:18:00+09:00",
   "resetText": "11/17 4:18",
   "additionalTokensLeft": "3B",
@@ -26,6 +26,6 @@
     "stale": true,
     "staleSinceText": "11/11 15:11"
   },
-  "updatedAt": "2026-11-13 00:12",
-  "updatedText": "11/13 00:12"
+  "updatedAt": "2026-11-13 01:12",
+  "updatedText": "11/13 01:12"
 }
