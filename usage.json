@@ -22,8 +22,10 @@
     "fiveHourResetText": "-",
     "weeklyUsedPercent": 30,
     "weeklyResetAt": "2026-11-26T19:59:59+09:00",
-    "weeklyResetText": "11/26 19:59"
+    "weeklyResetText": "11/26 19:59",
+    "stale": true,
+    "staleSinceText": "11/21 21:11"
   },
-  "updatedAt": "2026-11-21 20:11",
-  "updatedText": "11/21 20:11"
+  "updatedAt": "2026-11-21 22:11",
+  "updatedText": "11/21 22:11"
 }
