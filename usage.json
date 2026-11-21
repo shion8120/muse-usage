@@ -9,8 +9,8 @@
   "codex": {
     "plan": "plus",
     "fiveHourUsedPercent": 0,
-    "fiveHourResetAt": "2026-11-22T10:11:03+09:00",
-    "fiveHourResetText": "11/22 10:11",
+    "fiveHourResetAt": "2026-11-22T11:11:23+09:00",
+    "fiveHourResetText": "11/22 11:11",
     "weeklyUsedPercent": 7,
     "weeklyResetAt": "2026-11-26T02:54:13+09:00",
     "weeklyResetText": "11/26 2:54"
@@ -20,12 +20,10 @@
     "fiveHourUsedPercent": 0,
     "fiveHourResetAt": null,
     "fiveHourResetText": "-",
-    "weeklyUsedPercent": 30,
+    "weeklyUsedPercent": 33,
     "weeklyResetAt": "2026-11-26T19:59:59+09:00",
-    "weeklyResetText": "11/26 19:59",
-    "stale": true,
-    "staleSinceText": "11/21 21:11"
+    "weeklyResetText": "11/26 19:59"
   },
-  "updatedAt": "2026-11-22 05:11",
-  "updatedText": "11/22 05:11"
+  "updatedAt": "2026-11-22 06:11",
+  "updatedText": "11/22 06:11"
 }
