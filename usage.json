@@ -9,8 +9,8 @@
   "codex": {
     "plan": "plus",
     "fiveHourUsedPercent": 0,
-    "fiveHourResetAt": "2026-11-22T07:11:25+09:00",
-    "fiveHourResetText": "11/22 7:11",
+    "fiveHourResetAt": "2026-11-22T08:11:06+09:00",
+    "fiveHourResetText": "11/22 8:11",
     "weeklyUsedPercent": 7,
     "weeklyResetAt": "2026-11-26T02:54:13+09:00",
     "weeklyResetText": "11/26 2:54"
@@ -26,6 +26,6 @@
     "stale": true,
     "staleSinceText": "11/21 21:11"
   },
-  "updatedAt": "2026-11-22 02:11",
-  "updatedText": "11/22 02:11"
+  "updatedAt": "2026-11-22 03:11",
+  "updatedText": "11/22 03:11"
 }
