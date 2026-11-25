@@ -1,1 +1,29 @@
-{"additionalTokensLeft":"4.7B","additionalUsedPercent":5,"claude":{"fiveHourResetAt":"2026-11-26T09:19:59+09:00","fiveHourResetText":"11/26 9:19","fiveHourUsedPercent":6,"plan":"pro","weeklyResetAt":"2026-11-26T19:59:59+09:00","weeklyResetText":"11/26 19:59","weeklyUsedPercent":76},"codex":{"fiveHourResetAt":"2026-11-26T08:27:24+09:00","fiveHourResetText":"11/26 8:27","fiveHourUsedPercent":1,"plan":"plus","weeklyResetAt":"2026-12-03T03:27:24+09:00","weeklyResetText":"12/3 3:27","weeklyUsedPercent":0},"plan":"Free","resetAt":"2026-12-01T04:18:00+09:00","resetText":"12/1 4:18","updatedAt":"2026-11-26 06:11","updatedText":"11/26 06:11","weeklyRemainingPercent":0,"weeklyUsedPercent":100}
+{
+  "plan": "Free",
+  "weeklyUsedPercent": 100,
+  "weeklyRemainingPercent": 0,
+  "resetAt": "2026-12-01T04:18:00+09:00",
+  "resetText": "12/1 4:18",
+  "additionalTokensLeft": "4.7B",
+  "additionalUsedPercent": 6,
+  "codex": {
+    "plan": "plus",
+    "fiveHourUsedPercent": 1,
+    "fiveHourResetAt": "2026-11-26T08:27:24+09:00",
+    "fiveHourResetText": "11/26 8:27",
+    "weeklyUsedPercent": 0,
+    "weeklyResetAt": "2026-12-03T03:27:24+09:00",
+    "weeklyResetText": "12/3 3:27"
+  },
+  "claude": {
+    "plan": "pro",
+    "fiveHourUsedPercent": 13,
+    "fiveHourResetAt": "2026-11-26T09:19:59+09:00",
+    "fiveHourResetText": "11/26 9:19",
+    "weeklyUsedPercent": 76,
+    "weeklyResetAt": "2026-11-26T19:59:59+09:00",
+    "weeklyResetText": "11/26 19:59"
+  },
+  "updatedAt": "2026-11-26 07:11",
+  "updatedText": "11/26 07:11"
+}
