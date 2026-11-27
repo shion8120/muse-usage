@@ -2,17 +2,17 @@
   "additionalTokensLeft": "4.4B",
   "additionalUsedPercent": 11,
   "claude": {
-    "fiveHourResetAt": "2026-11-27T21:09:59+09:00",
-    "fiveHourResetText": "11/27 21:09",
-    "fiveHourUsedPercent": 18,
+    "fiveHourResetAt": "2026-11-27T21:10:00+09:00",
+    "fiveHourResetText": "11/27 21:10",
+    "fiveHourUsedPercent": 19,
     "plan": "pro",
-    "weeklyResetAt": "2026-12-03T19:59:59+09:00",
-    "weeklyResetText": "12/3 19:59",
+    "weeklyResetAt": "2026-12-03T20:00:00+09:00",
+    "weeklyResetText": "12/3 20:00",
     "weeklyUsedPercent": 17
   },
   "codex": {
-    "fiveHourResetAt": "2026-11-27T22:11:06+09:00",
-    "fiveHourResetText": "11/27 22:11",
+    "fiveHourResetAt": "2026-11-27T23:11:09+09:00",
+    "fiveHourResetText": "11/27 23:11",
     "fiveHourUsedPercent": 0,
     "plan": "plus",
     "weeklyResetAt": "2026-12-03T03:27:24+09:00",
@@ -22,8 +22,8 @@
   "plan": "Free",
   "resetAt": "2026-12-01T04:18:00+09:00",
   "resetText": "12/1 4:18",
-  "updatedAt": "2026-11-27 17:11",
-  "updatedText": "11/27 17:11",
+  "updatedAt": "2026-11-27 18:11",
+  "updatedText": "11/27 18:11",
   "weeklyRemainingPercent": 0,
   "weeklyUsedPercent": 100
 }
